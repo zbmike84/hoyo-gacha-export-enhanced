@@ -1,0 +1,183 @@
+const fs = require('fs-extra')
+const path = require('path')
+const fetch = require('electron-fetch').default
+const { BrowserWindow, app } = require('electron')
+const crypto = require('crypto')
+const unhandled = require('electron-unhandled')
+const windowStateKeeper = require('electron-window-state')
+const debounce = require('lodash/debounce')
+const { glob } = require('glob')
+
+const isDev = !app.isPackaged
+
+const userPath = app.getPath('userData')
+const appRoot = isDev ? path.resolve(__dirname, '..', '..') : path.resolve(app.getAppPath(), '..', '..')
+// one folder per game inside the merged app's userData
+const userDataPath = path.resolve(appRoot, 'userData', 'zzz')
+// const globalUserDataPath = path.resolve(userPath, 'userData')
+
+// the window belongs to the shell (src/main/window.js)
+const initWindow = () => require('../../../main/window').createWindow()
+const getWin = () => require('../../../main/window').getWin()
+
+const log = []
+const sendMsg = (text, type = 'LOAD_DATA_STATUS') => {
+  const win = getWin()
+  if (win) {
+    win.webContents.send(`zzz:${type}`, text)
+  }
+  if (type !== 'LOAD_DATA_STATUS') {
+    log.push([Date.now(), type, text])
+    saveLog()
+  }
+}
+
+const saveLog = () => {
+  const text = log.map(item => {
+    const time = new Date(item[0]).toLocaleString()
+    const type = item[1] === 'LOAD_DATA_STATUS' ? 'INFO' : item[1]
+    const text = item[2]
+    return `[${type}][${time}]${text}`
+  }).join('\r\n')
+  fs.outputFile(path.join(userDataPath, 'log.txt'), text)
+}
+
+const authkeyMask = (text = '') => {
+  return text.replace(/authkey=[^&]+&/g, 'authkey=***&')
+}
+
+unhandled({
+  showDialog: false,
+  logger: function (err) {
+    log.push([Date.now(), 'ERROR', authkeyMask(err.stack)])
+    saveLog()
+  }
+})
+
+const request = async (url) => {
+  const res = await fetch(url, {
+    timeout: 15 * 1000
+  })
+  return await res.json()
+}
+
+const sleep = (sec = 1) => {
+  return new Promise(rev => {
+    setTimeout(rev, sec * 1000)
+  })
+}
+
+const sortData = (data) => {
+  return data.map(item => {
+    const [time, name, type, rank] = item
+    return {
+      time, name, type, rank,
+      timestamp: new Date(time)
+    }
+  }).sort((a, b) => a.timestamp - b.timestamp)
+  .map(item => {
+    const { time, name, type, rank } = item
+    return [time, name, type, rank]
+  })
+}
+
+const langMap = new Map([
+  ['zh-cn', '简体中文'],
+  ['zh-tw', '繁體中文'],
+  ['en-us', 'English']
+])
+
+const localeMap = new Map([
+  ['zh-cn', ['zh', 'zh-CN']],
+  ['zh-tw', ['zh-TW']],
+  ['en-us', ['en-AU', 'en-CA', 'en-GB', 'en-NZ', 'en-US', 'en-ZA', 'en']]
+])
+
+const detectLocale = (value) => {
+  const locale = value || app.getLocale()
+  let result = 'zh-cn'
+  for (let [key, list] of localeMap) {
+    if (locale === key || list.includes(locale)) {
+      result = key
+      break
+    }
+  }
+  return result
+}
+
+const saveJSON = async (name, data) => {
+  try {
+    await fs.outputJSON(path.join(userDataPath, name), data)
+  } catch (e) {
+    sendMsg(e, 'ERROR')
+    await sleep(3)
+  }
+}
+
+const readJSON = async (dataPath, name) => {
+  let data = null
+  try {
+    data = await fs.readJSON(path.join(dataPath, name))
+  } catch (e) {}
+  return data
+}
+
+const hash = (data, type = 'sha256') => {
+  const hmac = crypto.createHmac(type, 'nap')
+  hmac.update(data)
+  return hmac.digest('hex')
+}
+
+const scryptKey = crypto.scryptSync(userPath, 'nap', 24)
+const cipherAes = (data) => {
+  const algorithm = 'aes-192-cbc'
+  const iv = Buffer.alloc(16, 0)
+  const cipher = crypto.createCipheriv(algorithm, scryptKey, iv)
+  let encrypted = cipher.update(data, 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+  return encrypted
+}
+
+const decipherAes = (encrypted) => {
+  const algorithm = 'aes-192-cbc'
+  const iv = Buffer.alloc(16, 0)
+  const decipher = crypto.createDecipheriv(algorithm, scryptKey, iv)
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+  decrypted += decipher.final('utf8')
+  return decrypted
+}
+
+const  interfaces = require('os').networkInterfaces()
+const localIp = () => {
+  for (var devName in interfaces) {
+    var iface = interfaces[devName]
+
+    for (var i = 0; i < iface.length; i++) {
+      var alias = iface[i]
+      if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal)
+        return alias.address
+    }
+  }
+  return '127.0.0.1'
+}
+
+async function getCacheText(gamePath) {
+  const results = await glob(path.join(gamePath, '/webCaches{/,/*/}Cache/Cache_Data/data_2'), {
+    stat: true,
+		withFileTypes: true,
+    nodir: true,
+    windowsPathsNoEscape: true
+  })
+  const timeSortedFiles = results
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    .map(path => path.fullpath())
+  const cacheText = await fs.readFile(path.join(timeSortedFiles[0]), 'utf8')
+
+  return [cacheText, timeSortedFiles[0]]
+}
+
+module.exports = {
+  sleep, request, hash, cipherAes, decipherAes, saveLog, getCacheText,
+  sendMsg, readJSON, saveJSON, initWindow, getWin, localIp, userPath, detectLocale, langMap,
+  appRoot, userDataPath
+}
