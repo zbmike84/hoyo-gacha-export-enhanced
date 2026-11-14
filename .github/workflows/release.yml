@@ -1,0 +1,72 @@
+name: Release
+
+# Push a tag like v2.0.1 (matching package.json "version") to build the Windows zip and
+# publish it as a GitHub Release. Day-to-day test builds come from build.yml on dev.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      # .npmrc points at npmmirror (China); GitHub runners are faster from GitHub itself
+      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history and tags, for the release notes
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Check the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile --non-interactive
+
+      - name: Unit tests
+        run: yarn test
+
+      - name: Build Windows x64 zip
+        run: yarn build:win64
+
+      - name: Checksum and release notes
+        run: |
+          cd build
+          zip=$(ls *.zip)
+          sha256sum "$zip" > "$zip.sha256"
+          prev=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          {
+            echo "Windows x64, portable: unzip anywhere (a NAS share works) and run HoyoGachaExport.exe."
+            echo "On first start, data from Genshin-Wish-Export / StarRailWarpExport / ZzzSignalSearchExport"
+            echo "folders next to it is copied into userData/."
+            echo
+            echo "## Changes${prev:+ since $prev}"
+            git log --no-merges --pretty='- %s' ${prev:+$prev..}"$GITHUB_REF_NAME"
+          } > ../release-notes.md
+          cat ../release-notes.md
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: HoYo Gacha Export ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: |
+            build/*.zip
+            build/*.zip.sha256
+          fail_on_unmatched_files: true

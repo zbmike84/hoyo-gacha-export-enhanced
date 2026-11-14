@@ -13,6 +13,13 @@ Based on [biuuu/genshin-wish-export](https://github.com/biuuu/genshin-wish-expor
 [biuuu/star-rail-warp-export](https://github.com/biuuu/star-rail-warp-export) and
 [earthjasonlin/zzz-signal-search-export](https://github.com/earthjasonlin/zzz-signal-search-export) (MIT).
 
+## Builds and releases
+
+- Every push to `dev` builds a Windows zip as a workflow artifact (`.github/workflows/build.yml`).
+- Pushing a tag `vX.Y.Z` that matches `package.json` publishes a GitHub Release with the zip and its
+  SHA-256 (`.github/workflows/release.yml`). The zip is portable: unzip anywhere, including a NAS
+  share. It is unsigned, so browsers and SmartScreen may warn about it.
+
 ## Layout
 
 - `src/main/` – app shell: window, IPC namespace (`<game>:<CHANNEL>`), legacy data migration,
