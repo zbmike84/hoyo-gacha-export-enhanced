@@ -1,6 +1,6 @@
 {
   "name": "hoyo-gacha-export-enhanced",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "main": "./dist/electron/main/main.js",
   "author": "zbmike84",
   "homepage": "https://github.com/zbmike84/hoyo-gacha-export-enhanced",
@@ -18,12 +18,12 @@
     "build:web": "cross-env BUILD_TARGET=web node .electron-vite/build.js",
     "dev:web": "cross-env TARGET=web node .electron-vite/dev-runner.js",
     "start": "electron ./src/main/main.js",
-    "build-update": "node .electron-vite/update.js",
     "dep:upgrade": "yarn upgrade-interactive --latest",
     "postinstall": "electron-builder install-app-deps",
     "gen:banners:genshin": "node scripts/genshin/gen-banners.mjs",
     "gen:banners:zzz": "node scripts/zzz/gen-banners.mjs",
-    "update:banners:starrail": "node scripts/starrail/update-banners.mjs"
+    "update:banners:starrail": "node scripts/starrail/update-banners.mjs",
+    "make:update": "node .electron-vite/make-update.js"
   },
   "build": {
     "nsis": {

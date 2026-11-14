@@ -19,6 +19,7 @@ const games = {
   zzz: require('../games/zzz/main'),
 }
 const { createWindow, getWin } = require('./window')
+const updater = require('./update')
 
 function openWindow() {
   const win = createWindow()
@@ -52,6 +53,13 @@ if (!app.requestSingleInstanceLock()) {
   }
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
   app.on('activate', () => { if (!getWin()) openWindow() })
-  app.on('will-quit', stopProxies)
+  app.on('will-quit', e => {
+    stopProxies()
+    // don't quit halfway through swapping in an update
+    if (updater.isBusy()) {
+      e.preventDefault()
+      setTimeout(() => app.quit(), 3000)
+    }
+  })
   app.on('quit', stopProxies)
 }

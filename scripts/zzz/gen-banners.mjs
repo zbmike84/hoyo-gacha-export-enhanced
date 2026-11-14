@@ -54,7 +54,11 @@ const out = {
 }
 const file = path.join(root, 'src/games/zzz/data/banners.json')
 await fs.mkdir(path.dirname(file), { recursive: true })
-await fs.writeFile(file, JSON.stringify(out, null, 1) + '\n')
+// keep the file when only timestamps would change, so the weekly job only releases on new data
+const strip = o => JSON.stringify({ ...o, generatedAt: undefined, upstreamUpdated: undefined })
+const old = await fs.readFile(file, 'utf8').then(JSON.parse).catch(() => null)
+if (old && strip(old) === strip(out)) console.log('banner data unchanged')
+else await fs.writeFile(file, JSON.stringify(out, null, 1) + '\n')
 const last = banners.at(-1)
 console.log(`${banners.length} banners (${banners.filter(b => b.rerun).length} reruns), latest ${last.version} ${last.phase} ${last.start}; wrote ${path.relative(root, file)}`)
 if (problems.length) {

@@ -1,10 +1,15 @@
 name: Release
 
 # Push a tag like v2.0.1 (matching package.json "version") to build the Windows zip and
-# publish it as a GitHub Release. Day-to-day test builds come from build.yml on dev.
+# publish it as a GitHub Release, with the self-update package (manifest.json + app zip)
+# the app polls. Day-to-day test builds come from build.yml on dev.
+#
+# Also runnable on a tag ref by workflow_dispatch: banners.yml uses that, since a tag pushed
+# with the workflow token does not trigger other workflows.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -45,6 +50,9 @@ jobs:
       - name: Build Windows x64 zip
         run: yarn build:win64
 
+      - name: Self-update package
+        run: yarn make:update
+
       - name: Checksum and release notes
         run: |
           cd build
@@ -54,7 +62,8 @@ jobs:
           {
             echo "Windows x64, portable: unzip anywhere (a NAS share works) and run HoyoGachaExport.exe."
             echo "On first start, data from Genshin-Wish-Export / StarRailWarpExport / ZzzSignalSearchExport"
-            echo "folders next to it is copied into userData/."
+            echo "folders next to it is copied into userData/. From 2.0.1 on the app updates itself"
+            echo "(app-*.zip + manifest.json); HoyoGachaExport-*-win.zip is the full download."
             echo
             echo "## Changes${prev:+ since $prev}"
             git log --no-merges --pretty='- %s' ${prev:+$prev..}"$GITHUB_REF_NAME"
@@ -69,4 +78,6 @@ jobs:
           files: |
             build/*.zip
             build/*.zip.sha256
+            build/update/manifest.json
+            build/update/app-*.zip
           fail_on_unmatched_files: true

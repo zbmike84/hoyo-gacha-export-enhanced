@@ -118,7 +118,12 @@ async function main() {
   }
   const file = path.join(root, 'src/games/genshin/data/banners.json')
   await fs.mkdir(path.dirname(file), { recursive: true })
-  await fs.writeFile(file, JSON.stringify(out) + '\n')
+  // keep the file (and its timestamp) when only `generated` would change, so the weekly
+  // job only releases when the data did
+  const strip = o => JSON.stringify({ ...o, generated: undefined })
+  const old = await fs.readFile(file, 'utf8').then(JSON.parse).catch(() => null)
+  if (old && strip(old) === strip(out)) console.log('banner data unchanged')
+  else await fs.writeFile(file, JSON.stringify(out) + '\n')
   const count = k => banners.filter(b => b.kind === k).length
   console.log(`banners: ${count('character')} character, ${count('weapon')} weapon, ${count('chronicled')} chronicled; ` +
     `latest ${banners.at(-1).version} ${banners.at(-1).start}`)

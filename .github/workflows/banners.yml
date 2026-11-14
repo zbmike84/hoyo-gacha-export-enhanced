@@ -1,0 +1,71 @@
+name: Banner data
+
+# Weekly: refresh the banner data shipped with the app (and the item id tables the
+# generators need). When anything changed, bump the patch version on main, tag it and run
+# the release workflow; installed apps then pick it up through the self-updater.
+on:
+  schedule:
+    - cron: '0 6 * * 3'   # Wednesday 06:00 UTC, after new versions and banner phases go live
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: banner-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sync item id tables from the upstream apps
+        run: |
+          set -euo pipefail
+          fetch() {   # upstream path, local path; keep ours if theirs isn't valid JSON
+            curl -fsSL "$1" -o /tmp/id.json && node -e "JSON.parse(require('fs').readFileSync('/tmp/id.json','utf8'))" && cp /tmp/id.json "$2"
+          }
+          fetch https://raw.githubusercontent.com/biuuu/star-rail-warp-export/main/src/idJson.json src/games/starrail/idJson.json
+          fetch https://raw.githubusercontent.com/earthjasonlin/zzz-signal-search-export/main/src/idJson.json src/games/zzz/idJson.json
+
+      - name: Regenerate banner data
+        run: |
+          node scripts/genshin/gen-banners.mjs
+          node scripts/zzz/gen-banners.mjs
+          node scripts/starrail/update-banners.mjs
+
+      - name: Release if anything changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Banner data unchanged; nothing to release."
+            exit 0
+          fi
+          git diff --stat
+          version=$(node -e "
+            const fs = require('fs'), p = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+            const [a, b, c] = p.version.split('.').map(Number)
+            p.version = [a, b, c + 1].join('.')
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n')
+            console.log(p.version)")
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A src/games package.json
+          git commit -q -m "Banner data update (v$version)" -m "$(git diff --cached --stat HEAD~0 | tail -1)"
+          git tag -a "v$version" -m "Banner data update"
+          git push origin HEAD:main "v$version"
+          # a tag pushed with this token doesn't trigger release.yml by itself
+          gh workflow run release.yml --ref "v$version"
+          echo "Released v$version"

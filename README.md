@@ -19,6 +19,13 @@ Based on [biuuu/genshin-wish-export](https://github.com/biuuu/genshin-wish-expor
 - Pushing a tag `vX.Y.Z` that matches `package.json` publishes a GitHub Release with the zip and its
   SHA-256 (`.github/workflows/release.yml`). The zip is portable: unzip anywhere, including a NAS
   share. It is unsigned, so browsers and SmartScreen may warn about it.
+- From 2.0.1 the app updates itself: each release also carries `manifest.json` and `app-<version>.zip`
+  (just `resources/app`, a few MB). The app checks a few seconds after start, swaps the folder in and
+  offers a restart; a release needing a different Electron version asks for the full download.
+  Auto update can be switched off in the header.
+- `.github/workflows/banners.yml` refreshes the banner data weekly (Wednesdays 06:00 UTC) and, when it
+  changed, bumps the patch version on `main`, tags it and runs the release. Merge `main` back into
+  `dev` before releasing work from `dev`.
 
 ## Layout
 
