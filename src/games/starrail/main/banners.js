@@ -1,18 +1,23 @@
 const ipcNs = require('../../../main/ipc')('starrail')
 // Star Rail banner data (which items were rate-up on which gacha_id).
 //
-// Source: PolyxiaBannerData (github.com/sirarikako/PolyxiaBannerData). It has no licence
-// yet, so it is downloaded at runtime and cached in userData instead of being shipped in
-// this repository. Built-in overrides fill gaps (new banners not catalogued yet).
+// Source: PolyxiaBannerData (github.com/sirarikako/PolyxiaBannerData, CC0). A snapshot ships
+// with the app (data/polyxia-starrail.json, scripts/starrail/update-banners.mjs) so it works
+// offline; at runtime a fresher copy is downloaded and cached in userData. Order of use:
+// fresh cache -> download -> stale cache -> bundled snapshot. Built-in overrides fill gaps
+// (new banners not catalogued yet).
 const fetch = require('electron-fetch').default
 const path = require('path')
 const fs = require('fs-extra')
 const { userDataPath } = require('./utils')
 const overrides = require('../data/banner-overrides.json')
+const bundled = require('../data/polyxia-starrail.json')
 
+// GitHub first: jsDelivr caches @main for days and can serve data older than the snapshot.
+// jsDelivr stays as the fallback for networks where GitHub is unreachable.
 const SOURCES = [
-  'https://cdn.jsdelivr.net/gh/sirarikako/PolyxiaBannerData@main/public/v1/starrail.json',
   'https://raw.githubusercontent.com/sirarikako/PolyxiaBannerData/main/public/v1/starrail.json',
+  'https://cdn.jsdelivr.net/gh/sirarikako/PolyxiaBannerData@main/public/v1/starrail.json',
 ]
 const cacheFile = path.join(userDataPath, 'banners-starrail.json')
 const MAX_AGE = 12 * 3600e3
@@ -76,9 +81,14 @@ async function getBanners(force = false) {
       cached = { fetchedAt: Date.now(), raw }
       await fs.outputJSON(cacheFile, cached)
     } catch (e) {
-      if (!cached) return { ok: false, error: String(e.message || e) }
-      return { ok: true, stale: true, error: String(e.message || e), fetchedAt: cached.fetchedAt, ...normalize(cached.raw) }
+      // offline: use the last downloaded copy, else the snapshot shipped with the app
+      const fallback = cached || { fetchedAt: Date.parse(bundled.generatedAt) || 0, raw: bundled }
+      return { ok: true, stale: true, bundled: !cached, error: String(e.message || e), fetchedAt: fallback.fetchedAt, ...normalize(fallback.raw) }
     }
+  }
+  // a CDN copy can be older than what ships with the app: use whichever was generated last
+  if ((Date.parse(bundled.generatedAt) || 0) > (Date.parse(cached.raw.generatedAt) || 0)) {
+    return { ok: true, stale: false, bundled: true, fetchedAt: Date.parse(bundled.generatedAt), ...normalize(bundled) }
   }
   return { ok: true, stale: false, fetchedAt: cached.fetchedAt, ...normalize(cached.raw) }
 }

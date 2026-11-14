@@ -208,5 +208,6 @@
   "ui.analysis.collection.sortPulls": "抽数",
   "ui.analysis.collection.extraLabel": "其他途径",
   "ui.analysis.collection.add": "添加其他途径获得的角色",
-  "ui.analysis.collection.onlyExtra": "只通过其他途径获得"
+  "ui.analysis.collection.onlyExtra": "只通过其他途径获得",
+  "ui.analysis.banners.bundled": "卡池数据更新失败（可能没联网），正在使用程序自带的 {d} 版本。"
 }

@@ -50,7 +50,7 @@
       <el-alert v-if="state.banners && !state.banners.ok" type="error" :closable="false" show-icon
                 :title="fmt(aText.banners.failed, { e: state.banners.error })"></el-alert>
       <el-alert v-else-if="state.banners?.stale" type="info" :closable="false" show-icon
-                :title="fmt(aText.banners.stale, { d: new Date(state.banners.fetchedAt).toLocaleString() })"></el-alert>
+                :title="fmt(state.banners.bundled ? aText.banners.bundled : aText.banners.stale, { d: new Date(state.banners.fetchedAt).toLocaleDateString() })"></el-alert>
       <template v-if="analysis">
         <el-alert v-if="analysis.issues.length" type="warning" :closable="false" show-icon
                   :title="fmt(aText.issues, { n: analysis.issues.length })"></el-alert>

@@ -22,7 +22,8 @@
     "dep:upgrade": "yarn upgrade-interactive --latest",
     "postinstall": "electron-builder install-app-deps",
     "gen:banners:genshin": "node scripts/genshin/gen-banners.mjs",
-    "gen:banners:zzz": "node scripts/zzz/gen-banners.mjs"
+    "gen:banners:zzz": "node scripts/zzz/gen-banners.mjs",
+    "update:banners:starrail": "node scripts/starrail/update-banners.mjs"
   },
   "build": {
     "nsis": {

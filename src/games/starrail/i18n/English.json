@@ -208,5 +208,6 @@
   "ui.analysis.collection.sortPulls": "Pulls",
   "ui.analysis.collection.extraLabel": "Other sources",
   "ui.analysis.collection.add": "Add a character from other sources",
-  "ui.analysis.collection.onlyExtra": "Only from other sources"
+  "ui.analysis.collection.onlyExtra": "Only from other sources",
+  "ui.analysis.banners.bundled": "Banner data could not be refreshed (offline?); using the copy shipped with the app, from {d}."
 }

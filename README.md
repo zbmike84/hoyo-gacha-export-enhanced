@@ -30,7 +30,8 @@ copied over; the old folders are not changed.
 
 - Genshin: [MadeBaruna/paimon-moe](https://github.com/MadeBaruna/paimon-moe) (MIT), generated into
   `src/games/genshin/data/banners.json`.
-- Star Rail: [sirarikako/PolyxiaBannerData](https://github.com/sirarikako/PolyxiaBannerData).
+- Star Rail: [sirarikako/PolyxiaBannerData](https://github.com/sirarikako/PolyxiaBannerData) (CC0); a snapshot
+  ships in `src/games/starrail/data/` (`scripts/starrail/update-banners.mjs`) and the app refreshes it at runtime.
 - ZZZ: [quantulr/hoyo-gacha](https://github.com/quantulr/hoyo-gacha) (MIT), from BWIKI.
 - Icons are downloaded at runtime (paimon-moe, Mar-7th/StarRailRes, Enka) and are not part of
   this repository; they are HoYoverse assets.
