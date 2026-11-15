@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white pt-2 pb-4 px-6 w-full h-full absolute inset-0">
+  <div class="setting-panel bg-white pt-2 pb-4 px-6 w-screen h-screen fixed inset-0 overflow-y-auto">
     <div class="flex content-center items-center mb-4 justify-between">
       <h3 class="text-lg">{{text.title}}</h3>
       <el-button icon="close" @click="closeSetting" plain circle type="default" class="w-8 h-8 relative -right-4 -top-2 shadow-md focus:shadow-none focus:outline-none"></el-button>
@@ -194,6 +194,8 @@ onMounted(async () => {
 </script>
 
 <style>
+/* above the shell's sticky game tabs (z-index 50) and the ledger's sticky banner headers */
+.setting-panel { z-index: 60; overscroll-behavior: contain }
 .el-form-item__label {
   line-height: normal !important;
   position: relative;
