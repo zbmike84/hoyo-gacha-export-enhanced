@@ -1,6 +1,6 @@
 {
   "name": "hoyo-gacha-export-enhanced",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "main": "./dist/electron/main/main.js",
   "author": "zbmike84",
   "homepage": "https://github.com/zbmike84/hoyo-gacha-export-enhanced",
